@@ -68,28 +68,45 @@ prompt=PromptTemplate.from_template(
 rag_chain=prompt|llm
 
 async def answer_query(query:str,user_role:str):
+    print("Query received:",query)
     embedding=await asyncio.to_thread(embed_model.embed_query,query)
     results=await asyncio.to_thread(index.query,vector=embedding,top_k=3,include_metadata=True)
 
+    ##print("Embedding of query is:",embedding)
+
     filtered_contexts=[]
     sources=set()
-
+    print(filtered_contexts)
+    
     for match in results["matches"]:
         metadata=match["metadata"]
         if metadata.get("role")==user_role:
-            print(metadata.get("text",""))
-            filtered_contexts.append(metadata.get("text","")+"\\n")
-            sources.add(metadata.get("source"))
+           print(metadata.get("text",""))
+           filtered_contexts.append(metadata.get("text","")+"\\n")
+           sources.add(metadata.get("source"))
         
     if not filtered_contexts:
-        return {"answer":"No relevant info found"}
+        return {"answer":"No relevant info found for your role. Please contact admin."}
     
     docs_text="\\n".join(filtered_contexts)
     final_answer=await asyncio.to_thread(rag_chain.invoke,{"question":query,"context":docs_text})
-    # print("Context is:",docs_text)
-    # print(final_answer.content)
 
     return {
         "answer":final_answer.content,
         "sources":list(sources)
     }
+
+
+# 
+# Example structure of results from Pinecone index.query:{
+#   "matches": [
+#     {
+#       "id": "abc123",
+#       "score": 0.89,
+#       "metadata": {...},
+#       "values": [...]
+#     },
+#     ...
+#   ],
+#
+# }

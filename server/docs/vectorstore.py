@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from tqdm.auto import tqdm
 from pinecone import Pinecone,ServerlessSpec
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.embeddings.base import Embeddings
 import voyageai
 import asyncio
@@ -80,6 +80,7 @@ async def load_vectorstore(uploaded_files,role:str,doc_id:str):
         
         loader=PyPDFLoader(str(save_path))
         documents=loader.load()
+        print("Role for document {}: {}".format(file.filename,role))
 
         splitter=RecursiveCharacterTextSplitter(chunk_size=500,chunk_overlap=100)
         chunks=splitter.split_documents(documents)
@@ -92,6 +93,7 @@ async def load_vectorstore(uploaded_files,role:str,doc_id:str):
                 "role":role,
                 "doc_id":doc_id,
                 "page":chunk.metadata.get("page",0),
+                ## Storing the text content as metadata for reference to LLMs
                 "text": chunk.page_content
             }
             for i,chunk in enumerate(chunks)
@@ -108,5 +110,31 @@ async def load_vectorstore(uploaded_files,role:str,doc_id:str):
             pbar.update(len(embeddings))
         print("Upload complete for {}.".format(file.filename))
 
+
+
+# 🤝 How upsert works with your code
+
+# Let's say:
+
+# ids = ["id1", "id2"]
+# embeddings = [[0.1, 0.2, 0.3], [0.5, 0.6, 0.7]]
+# metadata = [{"role": "patient"}, {"role": "doctor"}]
+
+
+# zip(ids, embeddings, metadata) produces:
+
+# [
+#   ("id1", [0.1, 0.2, 0.3], {"role": "patient"}),
+#   ("id2", [0.5, 0.6, 0.7], {"role": "doctor"})
+# ]
+
+
+# This is sent to Pinecone, and Pinecone stores 2 vectors.
+
+# 🔍 Important Clarification
+# ❌ score is not stored
+# ❌ Upsert does not take or store a score
+# ✔️ Score only appears when you do .query()
+# ✔️ Score depends on the query embedding
 
 

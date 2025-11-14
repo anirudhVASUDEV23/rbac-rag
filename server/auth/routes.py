@@ -15,6 +15,24 @@ def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
     return {"username": user["username"], "role": user["role"]}
 
 
+
+##Yes — it behaves very similarly to middleware, but with an important difference.
+##✅ Depends(authenticate) is NOT global middleware — it is per-endpoint middleware.
+# ✔️ Similar to middleware because:
+
+# It runs before your endpoint function
+
+# It can block the request (return 401, 403, etc.)
+
+# It can inject data into the endpoint (like user)
+
+# ❌ But it is not global middleware because:
+
+# It only runs for endpoints that use it
+
+# It does not apply to all routes automatically
+
+# Middleware sees every request → Depends only sees selected ones
 @router.post("/signup")
 def signup(signup_request: SignUpRequest):
     if users_collection.find_one({"username": signup_request.username}):
